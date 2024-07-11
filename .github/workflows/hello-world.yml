@@ -28,5 +28,5 @@ jobs:
           echo "$(cat hello/hello_world.txt)"
           echo test, and deploy your project.
           echo "$(date)"
-          echo "$(ENV.VARIABLE)"
+          echo $VARIABLE
 
