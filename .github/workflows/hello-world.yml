@@ -29,5 +29,5 @@ jobs:
           echo test, and deploy your project.
           echo "$(date)"
           echo "The value of VARIABLE is ${{ secrets.VARIABLE }}"
-          echo "The value of VARIABLE is ${{ variables.VARIABLE }}"
+          echo "The value of VARIABLE is ${{ env.VARIABLE }}"
 
