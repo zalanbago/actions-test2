@@ -27,3 +27,5 @@ jobs:
         run: |
           echo "$(cat hello/hello_world.txt)"
           echo test, and deploy your project.
+          echo date
+
