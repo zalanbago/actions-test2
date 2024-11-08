@@ -23,6 +23,9 @@ jobs:
       - name: Set up LLVM 18
         run: |
           echo "$(brew --prefix llvm@18)/bin" >> $GITHUB_PATH 
+          
+      - name: Check Clang version
+        run: clang --version  # Ez a sor ellenőrzi a Clang verziót
 
       # Runs a set of commands using the runners shell
       - name: Run a multi-line script
