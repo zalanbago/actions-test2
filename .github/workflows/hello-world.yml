@@ -20,6 +20,9 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
+      - name: List installed LLVM versions
+        run: brew list --versions llvm@18
+
       - name: Set up LLVM 18
         run: |
           echo "$(brew --prefix llvm@18)/bin" >> $GITHUB_PATH 
