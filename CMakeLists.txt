@@ -1,7 +1,8 @@
+# Set the CMP0048 policy to NEW to allow VERSION in project() command
 cmake_policy(SET CMP0048 NEW)
-project(MyProject VERSION 1.0.0)
 
-cmake_minimum_required(VERSION 3.10)
+# Define the project name and version
+project(MyProject VERSION 1.0.0)
 
 # Set a dummy PRODUCT_VERSION
 set(PRODUCT_VERSION "1.0.0")
@@ -11,7 +12,7 @@ if(DEFINED ENV{GITHUB_ACTIONS} AND $ENV{GITHUB_ACTIONS} STREQUAL "true")
     if(WIN32)
         # On Windows, use PowerShell to append to GITHUB_ENV
         execute_process(
-            COMMAND PowerShell -Command "[System.IO.File]::AppendAllText('$env:GITHUB_ENV', 'buildNumber=${PRODUCT_VERSION}`n')"
+            COMMAND PowerShell -Command "[System.IO.File]::AppendAllText([System.Environment]::GetEnvironmentVariable('GITHUB_ENV'), 'buildNumber=${PRODUCT_VERSION}`n')"
         )
     else()
         # On Unix-based systems (macOS, Linux), use bash to append to GITHUB_ENV
