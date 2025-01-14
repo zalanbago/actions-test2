@@ -14,8 +14,10 @@ if(DEFINED ENV{GITHUB_ACTIONS} AND $ENV{GITHUB_ACTIONS} STREQUAL "true")
         execute_process(
             COMMAND PowerShell -Command "[System.IO.File]::AppendAllText([System.Environment]::GetEnvironmentVariable('GITHUB_ENV'), 'buildNumber=${PRODUCT_VERSION}')"
             COMMAND PowerShell -Command "
-                $env:GITHUB_ENV = [System.Environment]::GetEnvironmentVariable('GITHUB_ENV');
-                'buildNumber=${PRODUCT_VERSION}' | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
+                $githubEnvPath = [System.Environment]::GetEnvironmentVariable('GITHUB_ENV')
+                if ($null -ne $githubEnvPath) {
+                    Add-Content -Path $githubEnvPath -Value 'buildNumber=${PRODUCT_VERSION}'
+                }
             "
             COMMAND PowerShell -Command "[System.IO.File]::AppendAllText([System.Environment]::GetEnvironmentVariable('GITHUB_ENV'), 'buildNumber="1.1.1"')"
         )
