@@ -18,7 +18,7 @@ if(DEFINED ENV{GITHUB_ACTIONS} AND $ENV{GITHUB_ACTIONS} STREQUAL "true")
             COMMAND PowerShell -Command "
                 $githubEnvPath = [System.Environment]::GetEnvironmentVariable('GITHUB_ENV')
                 if ($null -ne $githubEnvPath) {
-                    Add-Content -Path $githubEnvPath -Value 'masodik=${PRODUCT_VERSION}`n'
+                    Add-Content -Path $githubEnvPath -Value 'masodik=${PRODUCT_VERSION}'
                 }
             "
         )
