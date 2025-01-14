@@ -15,11 +15,7 @@ if(DEFINED ENV{GITHUB_ACTIONS} AND $ENV{GITHUB_ACTIONS} STREQUAL "true")
             COMMAND PowerShell -Command "[System.IO.File]::AppendAllText([System.Environment]::GetEnvironmentVariable('GITHUB_ENV'), 'elso=${PRODUCT_VERSION}')"
         )
         execute_process(
-            COMMAND PowerShell -Command "
-                $githubEnvPath = [System.Environment]::GetEnvironmentVariable('GITHUB_ENV')
-                Add-Content -Path $githubEnvPath -Value 'masodik=${PRODUCT_VERSION}'
-                }
-            "
+            COMMAND PowerShell -Command "Add-Content -Path [System.Environment]::GetEnvironmentVariable('GITHUB_ENV') -Value 'masodik=${PRODUCT_VERSION}'"
         )
         execute_process(
             COMMAND PowerShell -Command "[System.IO.File]::AppendAllText([System.Environment]::GetEnvironmentVariable('GITHUB_ENV'), 'harmadik=1.1.1')"
