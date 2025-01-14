@@ -12,18 +12,17 @@ if(DEFINED ENV{GITHUB_ACTIONS} AND $ENV{GITHUB_ACTIONS} STREQUAL "true")
     if(WIN32)
         # On Windows, use PowerShell to append to GITHUB_ENV
         execute_process(
-            COMMAND PowerShell -Command "[System.IO.File]::AppendAllText([System.Environment]::GetEnvironmentVariable('GITHUB_ENV'), 'elso=${PRODUCT_VERSION}`n')"
+            COMMAND PowerShell -Command "[System.IO.File]::AppendAllText([System.Environment]::GetEnvironmentVariable('GITHUB_ENV'), 'elso=${PRODUCT_VERSION}')"
         )
         execute_process(
             COMMAND PowerShell -Command "
                 $githubEnvPath = [System.Environment]::GetEnvironmentVariable('GITHUB_ENV')
-                if ($null -ne $githubEnvPath) {
-                    Add-Content -Path $githubEnvPath -Value 'masodik=${PRODUCT_VERSION}`n'
+                Add-Content -Path $githubEnvPath -Value 'masodik=${PRODUCT_VERSION}'
                 }
             "
         )
         execute_process(
-            COMMAND PowerShell -Command "[System.IO.File]::AppendAllText([System.Environment]::GetEnvironmentVariable('GITHUB_ENV'), 'harmadik=1.1.1`n')"
+            COMMAND PowerShell -Command "[System.IO.File]::AppendAllText([System.Environment]::GetEnvironmentVariable('GITHUB_ENV'), 'harmadik=1.1.1')"
         )
     else()
         # On Unix-based systems (macOS, Linux), use bash to append to GITHUB_ENV
