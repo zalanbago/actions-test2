@@ -13,7 +13,7 @@ jobs:
   # This workflow contains a single job called "build"
   build:
     # The type of runner that the job will run on
-    runs-on: macos-15
+    runs-on: windows-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -21,21 +21,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: List installed LLVM versions
-        run: brew list --versions llvm@18
+        run: cmake .
 
       - name: Set up LLVM 18
         run: |
-          echo "$(brew --prefix llvm@18)/bin" >> $GITHUB_PATH 
-          
-      - name: Check Clang version
-        run: clang --version  # Ez a sor ellenőrzi a Clang verziót
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo "$(cat hello/hello_world.txt)"
-          echo test, and deploy your project.
-          echo "$(date)"
-          echo "The value of VARIABLE is ${{ secrets.VARIABLE }}"
-          echo "The value of VARIABLE is ${{ VARS.TEST }}"
-
+          echo "fasz"
