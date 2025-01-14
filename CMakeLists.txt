@@ -13,7 +13,10 @@ if(DEFINED ENV{GITHUB_ACTIONS} AND $ENV{GITHUB_ACTIONS} STREQUAL "true")
         # On Windows, use PowerShell to append to GITHUB_ENV
         execute_process(
             COMMAND PowerShell -Command "[System.IO.File]::AppendAllText([System.Environment]::GetEnvironmentVariable('GITHUB_ENV'), 'buildNumber=${PRODUCT_VERSION}')"
-            COMMAND PowerShell -Command "[System.IO.File]::AppendAllText([System.Environment]::GetEnvironmentVariable('GITHUB_ENV'), 'buildNumber=${PRODUCT_VERSION}`r`n')"
+            COMMAND PowerShell -Command "
+                $env:GITHUB_ENV = [System.Environment]::GetEnvironmentVariable('GITHUB_ENV');
+                Add-Content -Path $env:GITHUB_ENV -Value 'buildNumber=${PRODUCT_VERSION}`r`n'
+            "
             COMMAND PowerShell -Command "[System.IO.File]::AppendAllText([System.Environment]::GetEnvironmentVariable('GITHUB_ENV'), 'buildNumber="1.1.1"')"
         )
     else()
