@@ -16,8 +16,7 @@ if(DEFINED ENV{GITHUB_ACTIONS} AND $ENV{GITHUB_ACTIONS} STREQUAL "true")
         )
         execute_process(
             COMMAND PowerShell -Command "
-                $githubEnvPath = [System.Environment]::GetEnvironmentVariable('GITHUB_ENV')
-                Add-Content -Path $githubEnvPath -Value 'masodik=${PRODUCT_VERSION}'
+                Add-Content -Path [System.Environment]::GetEnvironmentVariable('GITHUB_ENV') -Value 'masodik:${PRODUCT_VERSION}'
             "
         )
         execute_process(
