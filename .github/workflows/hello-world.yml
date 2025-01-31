@@ -20,9 +20,13 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
-      - name: List installed LLVM versions
-        run: cmake .
+      - uses: livewing/lcov-job-summary@v1.2.0
+        with:
+          lcov: lcov.info
 
-      - name: Set up LLVM 18
-        run: |
-          echo "fasz"
+      # - name: List installed LLVM versions
+      #   run: cmake .
+
+      # - name: Set up LLVM 18
+      #   run: |
+      #     echo "fasz"
