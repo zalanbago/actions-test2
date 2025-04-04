@@ -1,28 +1,235 @@
-# This is a basic workflow to help you get started with Actions
+name: Build
 
-name: Hello world
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
+  pull_request:
+    branches:
+      - master
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
-jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+env:
+  CI: true
+  JFROG_CLI_FAIL_NO_OP: true
+  BRANCH_NAME: "${{ github.head_ref || github.ref_name }}"
+  BUILD_NUMBER: "${{ github.run_number }}"
+  REPO: "${{ github.event.repository.name }}"
+  GH_BUILD_DIR: "${{ github.workspace }}"
+  PUMPKIN_HOME: "${{ github.workspace }}/Pumpkin"
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+    
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+jobs:  
+  BuildSDK:
+    timeout-minutes: 50
+    name: Build
+    runs-on: "github_anka_template:${{ vars.ANKA_TEMPLATE_ID_MACOS_15 }};run_id:${{ github.run_id }};job_index:${{ strategy.job-index }};unique_id:BuildSDK"
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+      - name: 🛒Checkout code
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.PUMPKIN }}
+          
+      - name: Checkout private submodulespumpkin
+        uses: actions/checkout@v4
+        with:
+          repository: goto-itsg/pumpkin
+          path: Pumpkin
+          submodules: true
+          fetch-depth: 1
+          ssh-key: ${{ secrets.PUMPKIN }}
+        
+      - name: Set up Apple Code Signing
+        uses: goto-automation/setup-mac-code-signing@v1
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11.8
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
 
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Install jazzy
         run: |
-          echo "$(cat hello/hello_world.txt)"
-          echo test, and deploy your project.
+          gem install jazzy
+
+      - name: Submodule update      
+        run: git submodule update --init --recursive
+        
+      - name: Install requirements
+        run: |
+          pip install -r Pumpkin/requirements.txt  
+
+      - name: Get required dependencies for Test
+        run: |
+          python3 Pumpkin/pumpkin.py
+      
+      - name: Release Package
+        shell: bash
+        working-directory: ${{ github.workspace }}/SDK
+        run: |
+          bash build.sh
+          
+      - name: Documentation
+        working-directory: ${{ github.workspace }}/SDK
+        run: |
+          #!/bin/bash
+          set -e  # Exit immediately if any command fails
+
+          # Define key variables
+          ME=$(basename "$0")
+          LATEST_RELEASE_NUMBER="5.3"
+          PWD="$(pwd)"
+          BUILD_DIR="${PWD}/build"
+          FRAMEWORKS_DIR="${BUILD_DIR}/Frameworks"
+          EXAMPLES_DIR="${BUILD_DIR}/Examples"
+          DOCS_DIR="${BUILD_DIR}/Documentation"
+          EXAMPLE_DIR_RescueCoreExample="SDKExample"
+          EXAMPLE_DIR_RescueCameraExample="SDKStreamExample"
+          EXAMPLE_DIR_RescueBroadcastExample="RescueBroadcastExample"
+
+          # Define functions
+          function build_target {
+              target=$1
+              sdk=$2
+              echo "${ME}: build_target ${target} ${sdk}"
+              xcodebuild -workspace ../rescue.xcworkspace -scheme $target -configuration "Release" -sdk $sdk \
+                         clean build CONFIGURATION_BUILD_DIR="${FRAMEWORKS_DIR}/${target}/${sdk}" \
+                         ONLY_ACTIVE_ARCH=NO SKIP_INSTALL=NO BUILD_LIBRARIES_FOR_DISTRIBUTION=YES || exit 1
+          }
+
+          function create_universal_product {
+              target=$1
+              iphoneos="${FRAMEWORKS_DIR}/${target}/iphoneos/${target}.framework"
+              iphonesimulator="${FRAMEWORKS_DIR}/${target}/iphonesimulator/${target}.framework"
+              output="${FRAMEWORKS_DIR}/${target}.xcframework"
+              echo "${ME}: create_universal_product ${target}"
+              
+              # Commented part preserved for creating universal product using 'lipo'
+              # cp -R $iphoneos_product_path "${FRAMEWORKS_DIR}" || exit 1
+              # cp -R "${iphonesimulator_product_path}/Modules/${target}.swiftmodule" "${FRAMEWORKS_DIR}/${target}.framework/Modules" || exit 1
+              # lipo -create -output "${FRAMEWORKS_DIR}/${target}.framework/${target}" $iphoneos_product_path/$target $iphonesimulator_product_path/$target || exit 1
+
+              xcodebuild -create-xcframework -framework $iphoneos -framework $iphonesimulator -output $output || exit 1
+          }
+
+          function check_if_product_universal {
+              target=$1
+              echo "${ME}: check_if_product_universal ${target} ..."
+              archs=("arm64" "x86_64")
+              for arch in "${archs[@]}"; do
+                  file ${FRAMEWORKS_DIR}/${target}.framework/${target} | grep $arch || exit 1
+              done
+
+              archs=("arm64" "x86_64")
+              for arch in "${archs[@]}"; do
+                  ls ${FRAMEWORKS_DIR}/${target}.framework/Modules/${target}.swiftmodule/*.swiftmodule | grep $arch.swiftmodule || exit 1
+              done
+              echo "${ME}: ... OK"
+          }
+
+          function build_universal_target {
+              target=$1
+              echo "${ME}: build_universal_target ${target}"
+              build_target $target "iphoneos"
+              build_target $target "iphonesimulator"
+              create_universal_product $target
+
+              # Optional: Uncomment below to check if products are universal
+              # check_if_product_universal $target
+
+              # Remove non-fat products
+              rm -Rf ${FRAMEWORKS_DIR}/${target} || exit 1
+          }
+
+          function copy_example_project {
+              project=$1
+              example_dir_var=EXAMPLE_DIR_$project
+              example_dir=${!example_dir_var}
+              project_example_dir=${EXAMPLES_DIR}/${project}
+              mkdir -pv $project_example_dir
+              cp -r ../${example_dir}/${project}External.xcodeproj $project_example_dir || exit 1
+              cp -r ../${example_dir}/${project} $project_example_dir || exit 1
+              [ -d ../${example_dir}/${project}Extension ] && cp -r ../${example_dir}/${project}Extension ${project_example_dir}
+              rm -rf ${project_example_dir}/${example_proj}.xcodeproj/xcuserdata || exit 1
+          }
+
+          function create_project_documentation {
+              project=$1
+              latest_frameworks_path=${LATEST_DIR}/iOS-SDK-${LATEST_RELEASE_NUMBER}/Frameworks
+              jazzy --xcodebuild-arguments -workspace,../rescue.xcworkspace,-scheme,${project},-sdk,iphoneos \
+                    -o ${DOCS_DIR}/API/${project} --clean --module ${project} --author LogMeIn \
+                    --author_url https://www.logmeinrescue.com/
+
+              # Optional: Uncomment for API diff creation
+              # objc-diff --old ${latest_frameworks_path}/${project}.framework \
+              #           --new ${FRAMEWORKS_DIR}/${project}.framework --html ${DOCS_DIR}/Changes/${project} --sdk iphonesimulator || exit 1
+          }
+
+          function get_stable_release {
+              archive_name="${LATEST_RELEASE_NUMBER}.zip"
+              curl -O -L "https://github.com/LogmeinRescue/iOS-SDK/archive/${archive_name}"
+              unzip $archive_name -d latest
+          }
+
+          function create_release_package {
+              project=$1
+              # Optional: Uncomment the following line if you decide to invoke universal build
+              # build_universal_target $project
+              create_project_documentation $project
+          }
+
+          # Install dependencies via Pumpkin
+          cd RescueSDK
+          python3 ../../Pumpkin/pumpkin.py || exit 1
+          cd -
+
+          # Remove output dir if exists
+          rm -Rf $BUILD_DIR || exit 1
+
+          # Optional: Uncomment for stable release retrieval
+          # get_stable_release
+
+          # Create release packages
+          create_release_package "RescueCore"
+          create_release_package "RescueBroadcast"
+          copy_example_project "RescueCoreExample"
+          copy_example_project "RescueCameraExample"
+          copy_example_project "RescueBroadcastExample"
+
+          # Extract media SDK path
+          MEDIA_SDK_PATH=$(xcodebuild -project ./RescueSDK/RescueSDK.xcodeproj -target RescueCore -showBuildSettings | grep "MEDIA_SDK_NAME" | sed 's/[ ]*MEDIA_SDK_NAME = //')
+
+          # Optional: Uncomment to copy additional frameworks
+          # cp -R "${PUMPKIN_HOME}/${MEDIA_SDK_PATH}/package/lib/ios/LMICoreMedia.framework" "${FRAMEWORKS_DIR}" || exit 1
+	
+      - name: Test SDK
+        shell: bash
+        run: |
+          xcodebuild test -derivedDataPath . -enableCodeCoverage YES -configuration Debug -workspace rescue.xcworkspace -scheme RescueCore -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone X' | xcpretty --report junit --output build/reports/sdk.xml
+   
+      - name: Test Camera
+        run: |
+          xcodebuild test -derivedDataPath . -enableCodeCoverage YES -configuration Debug -workspace rescue.xcworkspace -scheme RescueCameraExample -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone X' | xcpretty --report junit --output build/reports/camera.xml
+
+      - name: Test Core
+        run: |
+          xcodebuild test -derivedDataPath . -enableCodeCoverage YES -configuration Debug -workspace rescue.xcworkspace -scheme RescueCoreExample -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone X' | xcpretty --report junit --output build/reports/core.xml
+
+      - name: Test Uber
+        run: |
+          xcodebuild test -derivedDataPath . -enableCodeCoverage YES -configuration Debug -workspace rescue.xcworkspace -scheme Uber -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone X' | xcpretty --report junit --output build/reports/uber.xml
