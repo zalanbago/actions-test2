@@ -214,9 +214,6 @@ jobs:
           # Extract media SDK path
           MEDIA_SDK_PATH=$(xcodebuild -project ./RescueSDK/RescueSDK.xcodeproj -target RescueCore -showBuildSettings | grep "MEDIA_SDK_NAME" | sed 's/[ ]*MEDIA_SDK_NAME = //')
 
-          # Optional: Uncomment to copy additional frameworks
-          # cp -R "${PUMPKIN_HOME}/${MEDIA_SDK_PATH}/package/lib/ios/LMICoreMedia.framework" "${FRAMEWORKS_DIR}" || exit 1
-	
       - name: Test SDK
         shell: bash
         run: |
