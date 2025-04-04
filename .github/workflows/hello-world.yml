@@ -10,6 +10,11 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+
+
+env:
+  TEST: "TEST"
+  TEST_DEV: "${{ github.event.repository.name }}"
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
@@ -22,12 +27,15 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
-      - uses: livewing/lcov-job-summary@v1.2.0
-        with:
-          lcov: lcov.info
 
-      # - name: List installed LLVM versions
-      #   run: cmake .
+
+      - name: Set Branch Credentials
+        run: |
+          BRANCH_NAME=$TEST
+          echo "BRANCH_ENVIRONMENT_NAME=${BRANCH_NAME}_DEV" >> $GITHUB_ENV
+      
+      - name: Deploy
+        run: echo ${{ env[env.BRANCH_ENVIRONMENT_NAME] }}
 
       # - name: Set up LLVM 18
       #   run: |
