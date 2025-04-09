@@ -38,10 +38,8 @@ jobs:
         id: check_manual_workflow
         with:
           script: |
-            const branchName = context.ref.replace('refs/heads/', '');
+            const branchName = process.env.GITHUB_HEAD_REF;
 
-
-            const branchName = process.env.GITHUB_HEAD_REF;
 
             core.info(`Branch being queried: ${branchName}`);
             
