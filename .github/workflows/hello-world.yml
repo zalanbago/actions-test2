@@ -38,26 +38,36 @@ jobs:
         id: check_manual_workflow
         with:
           script: |
-            const commitSHA = process.env.GITHUB_SHA;
-            const branchName = process.env.GITHUB_REF_NAME;
+            const branchName = context.ref.replace('refs/heads/', '');
+            core.info(`Branch being queried: ${branchName}`);
+            
+            try {
+              // Fetch workflow runs for `manual.yaml`
+              const response = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'manual.yaml', // Replace with actual workflow name or ID
+                branch: branchName, // Current branch name
+              });
 
-            // Fetch workflow runs for `manual.yaml`
-            const workflowRuns = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'manual.yaml', // Replace with the path or ID of the workflow
-              branch: branchName,
-            });
+              if (!response.data.workflow_runs || response.data.workflow_runs.length === 0) {
+                core.setFailed('No workflow runs found for manual.yaml on branch: ' + branchName);
+                return;
+              }
 
-            // Check if there's a successful run for the current commit SHA
-            const successRun = workflowRuns.data.workflow_runs.find(run =>
-              run.head_sha === commitSHA && run.conclusion === 'success'
-            );
+              // Find successful workflow run for the same commit
+              const commitSHA = process.env.GITHUB_SHA;
+              const successRun = response.data.workflow_runs.find(run => 
+                run.head_sha === commitSHA && run.conclusion === 'success'
+              );
 
-            if (successRun) {
-              core.info(`Found successful run: ${successRun.id}`);
-            } else {
-              core.setFailed('No successful workflow run found for the same commit in `manual.yaml`.');
+              if (successRun) {
+                core.info(`Found successful run: ${successRun.id}`);
+              } else {
+                core.setFailed('No successful workflow run found for the same commit in manual.yaml on branch: ' + branchName);
+              }
+            } catch (err) {
+              core.setFailed(`Error fetching workflow runs: ${err.message}`);
             }
       
       - name: Deploy
