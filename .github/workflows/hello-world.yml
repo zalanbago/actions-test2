@@ -32,6 +32,7 @@ jobs:
         run: |
           BRANCH_NAME=$TEST
           echo "BRANCH_ENVIRONMENT_NAME=${BRANCH_NAME}_DEV" >> $GITHUB_ENV
+          piuhoadh
       
       - name: Deploy
         run: echo ${{ env[env.BRANCH_ENVIRONMENT_NAME] }}
