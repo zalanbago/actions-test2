@@ -32,6 +32,34 @@ jobs:
         run: |
           BRANCH_NAME=$TEST
           echo "BRANCH_ENVIRONMENT_NAME=${BRANCH_NAME}_DEV" >> $GITHUB_ENV
+
+
+      - name: Check if `manual.yaml` workflow succeeded for the same commit
+        uses: actions/github-script@v6
+        id: check_manual_workflow
+        with:
+          script: |
+            const commitSHA = process.env.GITHUB_SHA;
+            const branchName = process.env.GITHUB_REF_NAME;
+
+            // Fetch workflow runs for `manual.yaml`
+            const workflowRuns = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'manual.yaml', // Replace with the path or ID of the workflow
+              branch: branchName,
+            });
+
+            // Check if there's a successful run for the current commit SHA
+            const successRun = workflowRuns.data.workflow_runs.find(run =>
+              run.head_sha === commitSHA && run.conclusion === 'success'
+            );
+
+            if (successRun) {
+              core.info(`Found successful run: ${successRun.id}`);
+            } else {
+              core.setFailed('No successful workflow run found for the same commit in `manual.yaml`.');
+            }
       
       - name: Deploy
         run: echo ${{ env[env.BRANCH_ENVIRONMENT_NAME] }}
