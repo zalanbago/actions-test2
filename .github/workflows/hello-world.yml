@@ -6,7 +6,7 @@ name: Hello world
 on:
   # Triggers the workflow on push or pull request events but only for the "main" branch
   pull_request:
-    types: ['ready_for_review', 'synchronize']
+    types: ['ready_for_review', 'synchronize', 'labeled']
 
 
 
@@ -32,7 +32,6 @@ jobs:
         run: |
           BRANCH_NAME=$TEST
           echo "BRANCH_ENVIRONMENT_NAME=${BRANCH_NAME}_DEV" >> $GITHUB_ENV
-          piuhoadh
       
       - name: Deploy
         run: echo ${{ env[env.BRANCH_ENVIRONMENT_NAME] }}
