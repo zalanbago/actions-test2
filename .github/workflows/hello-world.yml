@@ -49,16 +49,16 @@ jobs:
               branch: branchName,
             });
 
-            # // Check if there's a successful run for the current commit SHA
-            # const successRun = workflowRuns.data.workflow_runs.find(run =>
-            #   run.head_sha === commitSHA && run.conclusion === 'success'
-            # );
+            // Check if there's a successful run for the current commit SHA
+            const successRun = workflowRuns.data.workflow_runs.find(run =>
+              run.head_sha === commitSHA && run.conclusion === 'success'
+            );
 
-            # if (successRun) {
-            #   core.info(`Found successful run: ${successRun.id}`);
-            # } else {
-            #   core.setFailed('No successful workflow run found for the same commit in `manual.yaml`.');
-            # }
+            if (successRun) {
+              core.info(`Found successful run: ${successRun.id}`);
+            } else {
+              core.setFailed('No successful workflow run found for the same commit in `manual.yaml`.');
+            }
       
       - name: Deploy
         run: echo ${{ env[env.BRANCH_ENVIRONMENT_NAME] }}
